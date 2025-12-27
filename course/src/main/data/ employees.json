@@ -1,0 +1,18 @@
+[
+  {
+    "name": "Ivan Petrov",
+    "at_work": "Yes",
+    "arrival_time": "08:55",
+    "departure_time": "16:40",
+    "today_time": "7:45",
+    "total_time": "159:00"
+  },
+  {
+    "name": "Anna Ivanova",
+    "at_work": "No",
+    "arrival_time": "09:20",
+    "departure_time": "14:55",
+    "today_time": "5:35",
+    "total_time": "120:30"
+  }
+]

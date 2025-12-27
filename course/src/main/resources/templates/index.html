@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="/style.css">
+    <title>Employee Tracker</title>
+</head>
+<body>
+<h1>Employee Status Tracker</h1>
+<table>
+    <thead>
+    <tr>
+        <th>Name</th>
+        <th>At Work</th>
+        <th>Arrival Time</th>
+        <th>Departure Time</th>
+        <th>Today's Time</th>
+        <th>Total Time</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tbody>
+        {{ROWS}}
+    </tbody>
+
+    {{^employees}}
+    <tr>
+        <td colspan="6" style="text-align: center;">No employees found.</td>
+    </tr>
+    {{/employees}}
+    </tbody>
+</table>
+</body>
+</html>
