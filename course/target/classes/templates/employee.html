@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-    <meta charset="UTF-8">
+    <meta charset="UTF-8" >
     <link rel="stylesheet" href="/style.css">
     <title>Сотрудник</title>
 </head>
@@ -10,7 +10,10 @@
 <h1>Сотрудник: {{NAME}}</h1>
 
 <p>Статус: <b>{{STATUS}}</b></p>
-<p>Сегодня отработано: {{TODAY}}</p>
+<!--<p>Сегодня отработано: {{TODAY}}</p>-->
+<!--<span id="todayTime">{{TODAY}}</span>-->
+<p>Сегодня отработано: <span id="todayTime">{{TODAY}}</span></p>
+
 <p>Всего отработано: {{TOTAL}}</p>
 
 {{ARRIVAL_BUTTON}}
@@ -20,6 +23,27 @@
 
 <br>
 <a href="/">На главную</a>
+<hr>
+<p> Обед</p>
+{{LUNCH_START_BUTTON}}
+{{LUNCH_END_BUTTON}}
+
+<h3>Контроль присутствия</h3>
+
+<p>{{QUESTION}}</p>
+
+{{QUESTION_BUTTON}}
+
+<script>
+    let minutes = {{TODAY_MINUTES}}; // вычисляется на сервере на момент загрузки
+
+    // обновление каждую минуту
+    setInterval(() => {
+        minutes++;
+        document.getElementById("todayTime").innerText = minutes + " мин";
+    }, 60000); // 60000 ms = 1 минута
+</script>
+
 
 </body>
 </html>

@@ -3,6 +3,7 @@ package com.example;
 import java.io.*;
 import java.net.*;
 import java.nio.charset.StandardCharsets;
+import java.time.LocalTime;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -122,6 +123,63 @@ public class Main {
                 response = loadStatic("public/style.css");
                 contentType = "text/css; charset=utf-8";
 
+            }
+            else if (path.equals("/confirm") && method.equals("POST")) {
+                int id = Integer.parseInt(params.get("id"));
+
+                PresenceControl.confirm(id);
+
+                System.out.println("[CONTROL] employee " + id + " confirmed presence");
+
+                Employee emp = CsvRepository.loadEmployees()
+                        .stream()
+                        .filter(e -> e.id == id)
+                        .findFirst()
+                        .orElse(null);
+
+                if (emp != null) {
+                    String encodedName = URLEncoder.encode(emp.name, StandardCharsets.UTF_8);
+                    sendRedirect(out, "/employee?name=" + encodedName);
+                } else {
+                    sendRedirect(out, "/");
+                }
+                return;
+            } else if (path.equals("/lunch/start") && method.equals("POST")) {
+                int id = Integer.parseInt(params.get("id"));
+
+                CsvRepository.startLunch(id);
+
+                Employee emp = CsvRepository.loadEmployees()
+                        .stream()
+                        .filter(e -> e.id == id)
+                        .findFirst()
+                        .orElse(null);
+
+                if (emp != null) {
+                    String encodedName = URLEncoder.encode(emp.name, StandardCharsets.UTF_8);
+                    sendRedirect(out, "/employee?name=" + encodedName);
+                } else {
+                    sendRedirect(out, "/");
+                }
+                return;
+            } else if (path.equals("/lunch/end") && method.equals("POST")) {
+                int id = Integer.parseInt(params.get("id"));
+
+                CsvRepository.endLunch(id);
+
+                Employee emp = CsvRepository.loadEmployees()
+                        .stream()
+                        .filter(e -> e.id == id)
+                        .findFirst()
+                        .orElse(null);
+
+                if (emp != null) {
+                    String encodedName = URLEncoder.encode(emp.name, StandardCharsets.UTF_8);
+                    sendRedirect(out, "/employee?name=" + encodedName);
+                } else {
+                    sendRedirect(out, "/");
+                }
+                return;
             } else {
                 response = "<h1>404 Not Found</h1>";
             }
@@ -197,5 +255,4 @@ public class Main {
         out.write(headers.getBytes(StandardCharsets.UTF_8));
         out.flush();
     }
-
 }

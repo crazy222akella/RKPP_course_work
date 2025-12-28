@@ -10,7 +10,6 @@ public class PageEmployee {
 
     public static String render(String fullPath) {
         try {
-            // ===== 1. Проверка имени =====
             if (!fullPath.contains("name=")) {
                 return "<h1>Имя сотрудника не указано</h1><a href='/login'>Назад</a>";
             }
@@ -20,11 +19,6 @@ public class PageEmployee {
                     StandardCharsets.UTF_8
             ).replace("+", " ").trim();
 
-            if (name.isEmpty()) {
-                return "<h1>Имя не может быть пустым</h1>";
-            }
-
-            // ===== 2. Поиск сотрудника =====
             Employee emp = CsvRepository.loadEmployees()
                     .stream()
                     .filter(e -> e.name.equalsIgnoreCase(name))
@@ -37,74 +31,119 @@ public class PageEmployee {
 
             int id = emp.id;
 
-            // ===== 3. Посещения =====
             List<AttendanceRecord> records = CsvRepository.getAttendance(id);
 
             AttendanceRecord today = records.stream()
                     .filter(r -> r.date.equals(LocalDate.now()))
-                    .reduce((first, second) -> second) // ← последняя запись
+                    .reduce((first, second) -> second)
                     .orElse(null);
-
-            boolean atWork = today != null && today.isAtWork();
-
-            String status = atWork ? "На работе" : "Не на работе";
-
-            long todayMinutes = 0;
-
-            for (AttendanceRecord r : records) {
-                if (!r.date.equals(LocalDate.now())) continue;
-
-                if (r.departure != null) {
-                    todayMinutes += Duration.between(r.arrival, r.departure).toMinutes();
-                }
+            System.out.println("[DEBUG] today=" + today);
+            if (today != null) {
+                System.out.println("[DEBUG] arrival=" + today.arrival);
+                System.out.println("[DEBUG] lunchStart=" + today.lunchStart);
+                System.out.println("[DEBUG] lunchEnd=" + today.lunchEnd);
+                System.out.println("[DEBUG] departure=" + today.departure);
+                System.out.println("[DEBUG] isAtWork=" + today.isAtWork());
+                System.out.println("[DEBUG] isAtLunch=" + today.isAtLunch());
             }
 
-            String todayTime = todayMinutes + " мин";
+            boolean atWork = today != null && today.isAtWork();
+            boolean atLunch = today != null && today.isAtLunch() && atWork;
 
+
+
+            String status;
+            if (atLunch) {
+                status = "На обеде";
+            } else if (atWork) {
+                status = "На работе";
+            } else {
+                status = "Не на работе";
+            }
+
+            String todayTime = "0 мин";
+            if (today != null && today.departure != null) {
+                long mins = Duration.between(today.arrival, today.departure).toMinutes();
+                todayTime = mins + " мин";
+            }
 
             String totalTime = emp.totalMinutes + " мин";
 
-            // ===== 4. Кнопки =====
             String arrivalBtn = "";
             String departureBtn = "";
 
             if (!atWork) {
                 arrivalBtn = """
-                    <form action="/arrival" method="post">
-                        <input type="hidden" name="id" value="%d">
-                        <button type="submit">На работе</button>
-                    </form>
-                """.formatted(id);
+                <form action="/arrival" method="post">
+                    <input type="hidden" name="id" value="%d">
+                    <button type="submit">На работе</button>
+                </form>
+            """.formatted(id);
             }
 
             if (atWork) {
                 departureBtn = """
-                    <form action="/departure" method="post">
+                <form action="/departure" method="post">
+                    <input type="hidden" name="id" value="%d">
+                    <button type="submit">Закончил работу</button>
+                </form>
+            """.formatted(id);
+            }
+            String question = "";
+            String questionBtn = "";
+
+            if (atWork && PresenceControl.shouldAsk(id)) {
+                question = "Подтвердите присутствие на рабочем месте";
+                questionBtn = """
+                    <form action="/confirm" method="post">
                         <input type="hidden" name="id" value="%d">
-                        <button type="submit">Закончил работу</button>
+                        <button type="submit">Я на месте</button>
                     </form>
                 """.formatted(id);
             }
 
-            // ===== 5. HTML =====
+            String lunchStartBtn = "";
+            String lunchEndBtn = "";
+
+            // Уйти на обед — если на работе и НЕ на обеде
+            if (atWork && !atLunch) {
+                lunchStartBtn = """
+                    <form action="/lunch/start" method="post">
+                        <input type="hidden" name="id" value="%d">
+                        <button type="submit">Уйти на обед</button>
+                    </form>
+                """.formatted(id);
+            }
+
+            // Вернуться с обеда — если на обеде
+            if (atLunch) {
+                lunchEndBtn = """
+                    <form action="/lunch/end" method="post">
+                        <input type="hidden" name="id" value="%d">
+                        <button type="submit">Вернуться с обеда</button>
+                    </form>
+                """.formatted(id);
+            }
+
+
             String html = Main.loadTemplate("employee.html");
 
-            html = html
+            return html
                     .replace("{{NAME}}", emp.name)
                     .replace("{{STATUS}}", status)
                     .replace("{{TODAY}}", todayTime)
                     .replace("{{TOTAL}}", totalTime)
                     .replace("{{ARRIVAL_BUTTON}}", arrivalBtn)
-                    .replace("{{DEPARTURE_BUTTON}}", departureBtn);
-            System.out.println("[DEBUG] employee=" + emp.name);
-            System.out.println("[DEBUG] today record=" + today);
-            System.out.println("[DEBUG] atWork=" + atWork);
-
-            return html;
+                    .replace("{{DEPARTURE_BUTTON}}", departureBtn)
+                    .replace("{{QUESTION}}", question)
+                    .replace("{{QUESTION_BUTTON}}", questionBtn)
+                    .replace("{{LUNCH_END_BUTTON}}",lunchEndBtn)
+                    .replace("{{LUNCH_START_BUTTON}}",lunchStartBtn);
 
         } catch (Exception e) {
             e.printStackTrace();
             return "<h1>Ошибка загрузки сотрудника</h1>";
         }
     }
+
 }

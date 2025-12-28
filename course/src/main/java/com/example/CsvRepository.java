@@ -57,7 +57,18 @@ public class CsvRepository {
                 r.employeeId = employeeId;
                 r.date = LocalDate.parse(p[1]);
                 r.arrival = LocalTime.parse(p[2]);
-                r.departure = p[3].isEmpty() ? null : LocalTime.parse(p[3]);
+
+                r.lunchStart = p.length > 3 && !p[3].isEmpty()
+                        ? LocalTime.parse(p[3]) : null;
+
+                r.lunchEnd = p.length > 4 && !p[4].isEmpty()
+                        ? LocalTime.parse(p[4]) : null;
+
+                r.departure = p.length > 5 && !p[5].isEmpty()
+                        ? LocalTime.parse(p[5]) : null;
+                System.out.println("[DEBUG] parsed lunchStart=" + r.lunchStart);
+                System.out.println("[DEBUG] parsed lunchEnd=" + r.lunchEnd);
+
 
                 list.add(r);
             }
@@ -66,15 +77,117 @@ public class CsvRepository {
         System.out.println("[DEBUG] attendance records count = " + list.size());
         return list;
     }
+    public static void logLunchStart(int employeeId) throws IOException {
+        List<String> lines = Files.readAllLines(Path.of(ATT_FILE));
+        LocalDate today = LocalDate.now();
+        LocalTime now = LocalTime.now();
 
+        for (int i = lines.size() - 1; i >= 1; i--) {
+            String[] p = lines.get(i).split(",", -1);
 
+            if (Integer.parseInt(p[0]) == employeeId &&
+                    LocalDate.parse(p[1]).equals(today) &&
+                    !p[2].isEmpty() &&          // есть приход
+                    p[3].isEmpty()) {           // обед не начат
 
+                lines.set(i,
+                        p[0] + "," + p[1] + "," + p[2] + "," + now + ",," + p[5]
+                );
+                break;
+            }
+        }
+
+        Files.write(Path.of(ATT_FILE), lines);
+    }
+    public static void logLunchEnd(int employeeId) throws IOException {
+        List<String> lines = Files.readAllLines(Path.of(ATT_FILE));
+        LocalDate today = LocalDate.now();
+        LocalTime now = LocalTime.now();
+
+        for (int i = lines.size() - 1; i >= 1; i--) {
+            String[] p = lines.get(i).split(",", -1);
+
+            if (Integer.parseInt(p[0]) == employeeId &&
+                    LocalDate.parse(p[1]).equals(today) &&
+                    !p[3].isEmpty() &&
+                    p[4].isEmpty()) {
+
+                lines.set(i,
+                        p[0] + "," + p[1] + "," + p[2] + "," + p[3] + "," + now + "," + p[5]
+                );
+                break;
+            }
+        }
+
+        Files.write(Path.of(ATT_FILE), lines);
+    }
 
     public static void logArrival(int employeeId) throws IOException {
         List<String> lines = Files.readAllLines(Path.of(ATT_FILE));
         LocalDate today = LocalDate.now();
+        LocalTime now = LocalTime.now();
 
-        System.out.println("[DEBUG] logArrival for id=" + employeeId);
+        boolean found = false;
+
+        // Ищем последнюю запись за сегодня
+        for (int i = lines.size() - 1; i >= 1; i--) {
+            String[] p = lines.get(i).split(",", -1);
+
+            if (Integer.parseInt(p[0]) == employeeId &&
+                    LocalDate.parse(p[1]).equals(today)) {
+
+                // Если последняя запись без ухода — сотрудник уже на работе
+                if (p.length >= 6 && p[5].isEmpty()) {
+                    System.out.println("[DEBUG] employee already at work, arrival ignored");
+                    return;
+                }
+
+                found = true;
+                break;
+            }
+        }
+
+        // Создаем новую запись на сегодня, очищаем старые обеды и уходы
+        String newLine = employeeId + "," + today + "," + now + ",,,";
+        lines.add(newLine);
+        Files.write(Path.of(ATT_FILE), lines);
+
+        System.out.println("[DEBUG] new arrival line = " + newLine);
+    }
+
+
+    public static void logDeparture(int employeeId) throws IOException {
+        List<String> lines = Files.readAllLines(Path.of(ATT_FILE));
+        LocalDate today = LocalDate.now();
+        LocalTime now = LocalTime.now();
+
+        for (int i = lines.size() - 1; i >= 1; i--) {
+            String[] p = lines.get(i).split(",", -1);
+
+            if (Integer.parseInt(p[0]) == employeeId &&
+                    LocalDate.parse(p[1]).equals(today) &&
+                    (p.length < 6 || p[5].isEmpty())) {
+
+                p[5] = now.toString();   // departure
+                p[3] = "";               // очищаем lunchStart
+                p[4] = "";               // очищаем lunchEnd
+                lines.set(i, String.join(",", p));
+
+                int minutes = (int) Duration.between(LocalTime.parse(p[2]), now).toMinutes();
+                addMinutesToEmployee(employeeId, minutes);
+                break;
+            }
+        }
+
+        Files.write(Path.of(ATT_FILE), lines);
+    }
+
+
+
+    public static void startLunch(int employeeId) throws IOException {
+        List<String> lines = Files.readAllLines(Path.of(ATT_FILE));
+        LocalDate today = LocalDate.now();
+        LocalTime now = LocalTime.now();
 
         for (int i = lines.size() - 1; i >= 1; i--) {
             String[] p = lines.get(i).split(",", -1);
@@ -82,56 +195,52 @@ public class CsvRepository {
             if (Integer.parseInt(p[0]) == employeeId &&
                     LocalDate.parse(p[1]).equals(today)) {
 
-                if (p[3].isEmpty()) {
-                    System.out.println("[DEBUG] arrival ignored — employee already at work");
-                    return;
+                // гарантируем 6 колонок
+                while (p.length < 6) {
+                    p = Arrays.copyOf(p, p.length + 1);
+                    p[p.length - 1] = "";
                 }
 
-                break; // последняя запись закрыта — можно новый приход
+                // Обновляем lunchStart и очищаем lunchEnd
+                p[3] = now.toString();
+                p[4] = "";
+                p[5] = "";
+
+                lines.set(i, String.join(",", p));
+                break;
             }
         }
 
-        String newLine = employeeId + "," + today + "," + LocalTime.now() + ",";
-        System.out.println("[DEBUG] new arrival line = " + newLine);
-
-        lines.add(newLine);
         Files.write(Path.of(ATT_FILE), lines);
     }
 
 
 
-
-
-    public static void logDeparture(int employeeId) throws IOException {
-        List<String> lines = java.nio.file.Files.readAllLines(new File(ATT_FILE).toPath());
-
+    public static void endLunch(int employeeId) throws IOException {
+        List<String> lines = Files.readAllLines(Path.of(ATT_FILE));
         LocalDate today = LocalDate.now();
         LocalTime now = LocalTime.now();
 
-        System.out.println("[DEBUG] logDeparture for id=" + employeeId);
+        System.out.println("[DEBUG] endLunch id=" + employeeId);
 
         for (int i = lines.size() - 1; i >= 1; i--) {
             String[] p = lines.get(i).split(",", -1);
 
-            System.out.println("[DEBUG] check line: " + Arrays.toString(p));
-
             if (Integer.parseInt(p[0]) == employeeId &&
                     LocalDate.parse(p[1]).equals(today) &&
-                    p[3].isEmpty()) {
+                    !p[3].isEmpty() && // lunchStart != null
+                    p[4].isEmpty() &&  // lunchEnd == null
+                    p[5].isEmpty()) {
 
-                LocalTime arrival = LocalTime.parse(p[2]);
-                int minutes = (int) Duration.between(arrival, now).toMinutes();
+                p[4] = now.toString();
+                lines.set(i, String.join(",", p));
 
-                lines.set(i, p[0] + "," + p[1] + "," + p[2] + "," + now);
-
-                System.out.println("[DEBUG] departure written, minutes=" + minutes);
-
-                addMinutesToEmployee(employeeId, minutes);
+                System.out.println("[DEBUG] lunch ended at " + now);
                 break;
             }
         }
 
-        java.nio.file.Files.write(new File(ATT_FILE).toPath(), lines);
+        Files.write(Path.of(ATT_FILE), lines);
     }
 
 

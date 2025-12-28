@@ -8,13 +8,15 @@
 </head>
 <body>
 <h1>Employee Status Tracker</h1>
+<form action="/login" method="get" style="margin-bottom: 20px;">
+    <button type="submit">Войти</button>
+</form>
+
 <table>
     <thead>
     <tr>
         <th>Name</th>
         <th>At Work</th>
-        <th>Arrival Time</th>
-        <th>Departure Time</th>
         <th>Today's Time</th>
         <th>Total Time</th>
     </tr>
@@ -24,11 +26,11 @@
         {{ROWS}}
     </tbody>
 
-    {{^employees}}
+
     <tr>
         <td colspan="6" style="text-align: center;">No employees found.</td>
     </tr>
-    {{/employees}}
+
     </tbody>
 </table>
 </body>
