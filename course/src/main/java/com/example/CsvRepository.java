@@ -141,12 +141,10 @@ public class CsvRepository {
                     System.out.println("[DEBUG] employee already at work, arrival ignored");
                     return;
                 }
-
                 found = true;
                 break;
             }
         }
-
         // Создаем новую запись на сегодня, очищаем старые обеды и уходы
         String newLine = employeeId + "," + today + "," + now + ",,,";
         lines.add(newLine);
@@ -154,7 +152,6 @@ public class CsvRepository {
 
         System.out.println("[DEBUG] new arrival line = " + newLine);
     }
-
 
     public static void logDeparture(int employeeId) throws IOException {
         List<String> lines = Files.readAllLines(Path.of(ATT_FILE));
@@ -210,11 +207,8 @@ public class CsvRepository {
                 break;
             }
         }
-
         Files.write(Path.of(ATT_FILE), lines);
     }
-
-
 
     public static void endLunch(int employeeId) throws IOException {
         List<String> lines = Files.readAllLines(Path.of(ATT_FILE));
@@ -239,10 +233,8 @@ public class CsvRepository {
                 break;
             }
         }
-
         Files.write(Path.of(ATT_FILE), lines);
     }
-
 
     private static void addMinutesToEmployee(int employeeId, int minutes) throws IOException {
 
@@ -261,32 +253,4 @@ public class CsvRepository {
         java.nio.file.Files.write(new File(EMP_FILE).toPath(), lines);
     }
 
-
-
-    // ===== HELPERS =====
-
-    private static BufferedReader openReader(String path) throws IOException {
-        InputStream is = CsvRepository.class
-                .getClassLoader()
-                .getResourceAsStream(path);
-
-        if (is == null) throw new FileNotFoundException(path);
-
-        return new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8));
-    }
-
-    private static BufferedWriter openWriter(String path, boolean append) throws IOException {
-        File file = new File("src/main/resources/" + path);
-        return new BufferedWriter(new FileWriter(file, append));
-    }
-
-    private static List<String> readAllLines(String path) throws IOException {
-        File file = new File("src/main/resources/" + path);
-        return new ArrayList<>(java.nio.file.Files.readAllLines(file.toPath()));
-    }
-
-    private static void writeAllLines(String path, List<String> lines) throws IOException {
-        File file = new File("src/main/resources/" + path);
-        java.nio.file.Files.write(file.toPath(), lines);
-    }
 }

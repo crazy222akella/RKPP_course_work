@@ -63,129 +63,63 @@ public class Main {
                     "GET".equals(method) ? fullPath : body
             );
 
-            // ===== РОУТИНГ =====
-
-            // --- ARRIVAL ---
-            if (path.equals("/arrival") && method.equals("POST")) {
-                int id = Integer.parseInt(params.get("id"));
-                CsvRepository.logArrival(id);
-                Employee emp = CsvRepository.loadEmployees()
-                        .stream()
-                        .filter(e -> e.id == id)
-                        .findFirst()
-                        .orElse(null);
-
-                if (emp == null) {
-                    sendRedirect(out, "/");
-                    return;
+            // ===== POST ACTIONS =====
+            if ("POST".equals(method)) {
+                int id = params.containsKey("id") ? Integer.parseInt(params.get("id")) : -1;
+                Employee emp = null;
+                if (id != -1) {
+                    emp = CsvRepository.loadEmployees()
+                            .stream()
+                            .filter(e -> e.id == id)
+                            .findFirst()
+                            .orElse(null);
                 }
 
-                String encodedName = URLEncoder.encode(emp.name, StandardCharsets.UTF_8);
-                sendRedirect(out, "/employee?name=" + encodedName);
-                return;
-
-            }
-
-            // --- DEPARTURE ---
-            if (path.equals("/departure") && method.equals("POST")) {
-                int id = Integer.parseInt(params.get("id"));
-                CsvRepository.logDeparture(id);
-                Employee emp = CsvRepository.loadEmployees()
-                        .stream()
-                        .filter(e -> e.id == id)
-                        .findFirst()
-                        .orElse(null);
-
-                if (emp == null) {
-                    sendRedirect(out, "/");
-                    return;
+                if (path.equals("/arrival") && emp != null) {
+                    CsvRepository.logArrival(id);
+                    EmployeeLogger.log(id, "Пришел на работу");
+                } else if (path.equals("/departure") && emp != null) {
+                    CsvRepository.logDeparture(id);
+                    EmployeeLogger.log(id, "Ушел с работы");
+                } else if (path.equals("/confirm") && emp != null) {
+                    PresenceControl.confirm(id);
+                    System.out.println("[CONTROL] employee " + id + " confirmed presence");
+                    EmployeeLogger.log(id, "Подтвердил присутствие");
+                } else if (path.equals("/lunch/start") && emp != null) {
+                    CsvRepository.startLunch(id);
+                    EmployeeLogger.log(id, "Ушел на обед");
+                } else if (path.equals("/lunch/end") && emp != null) {
+                    CsvRepository.endLunch(id);
+                    EmployeeLogger.log(id, "Вернулся с обеда");
                 }
 
-                String encodedName = URLEncoder.encode(emp.name, StandardCharsets.UTF_8);
-                sendRedirect(out, "/employee?name=" + encodedName);
+                if (emp != null) {
+                    String encodedName = URLEncoder.encode(emp.name, StandardCharsets.UTF_8);
+                    sendRedirect(out, "/employee?name=" + encodedName);
+                } else {
+                    sendRedirect(out, "/");
+                }
                 return;
             }
 
-            // ===== обычные страницы =====
+            // ===== PAGES =====
             String response;
             String contentType = "text/html; charset=utf-8";
 
             if (path.equals("/") || path.equals("/index")) {
                 response = PageIndex.render();
-
             } else if (path.equals("/login")) {
                 response = PageLogin.render();
-
             } else if (path.startsWith("/employee")) {
                 response = PageEmployee.render(fullPath);
-
             } else if (path.equals("/style.css")) {
                 response = loadStatic("public/style.css");
                 contentType = "text/css; charset=utf-8";
-
-            }
-            else if (path.equals("/confirm") && method.equals("POST")) {
-                int id = Integer.parseInt(params.get("id"));
-
-                PresenceControl.confirm(id);
-
-                System.out.println("[CONTROL] employee " + id + " confirmed presence");
-
-                Employee emp = CsvRepository.loadEmployees()
-                        .stream()
-                        .filter(e -> e.id == id)
-                        .findFirst()
-                        .orElse(null);
-
-                if (emp != null) {
-                    String encodedName = URLEncoder.encode(emp.name, StandardCharsets.UTF_8);
-                    sendRedirect(out, "/employee?name=" + encodedName);
-                } else {
-                    sendRedirect(out, "/");
-                }
-                return;
-            } else if (path.equals("/lunch/start") && method.equals("POST")) {
-                int id = Integer.parseInt(params.get("id"));
-
-                CsvRepository.startLunch(id);
-
-                Employee emp = CsvRepository.loadEmployees()
-                        .stream()
-                        .filter(e -> e.id == id)
-                        .findFirst()
-                        .orElse(null);
-
-                if (emp != null) {
-                    String encodedName = URLEncoder.encode(emp.name, StandardCharsets.UTF_8);
-                    sendRedirect(out, "/employee?name=" + encodedName);
-                } else {
-                    sendRedirect(out, "/");
-                }
-                return;
-            } else if (path.equals("/lunch/end") && method.equals("POST")) {
-                int id = Integer.parseInt(params.get("id"));
-
-                CsvRepository.endLunch(id);
-
-                Employee emp = CsvRepository.loadEmployees()
-                        .stream()
-                        .filter(e -> e.id == id)
-                        .findFirst()
-                        .orElse(null);
-
-                if (emp != null) {
-                    String encodedName = URLEncoder.encode(emp.name, StandardCharsets.UTF_8);
-                    sendRedirect(out, "/employee?name=" + encodedName);
-                } else {
-                    sendRedirect(out, "/");
-                }
-                return;
             } else {
                 response = "<h1>404 Not Found</h1>";
             }
 
             byte[] bodyBytes = response.getBytes(StandardCharsets.UTF_8);
-
             String headers =
                     "HTTP/1.1 200 OK\r\n" +
                             "Content-Type: " + contentType + "\r\n" +
@@ -200,6 +134,7 @@ public class Main {
             e.printStackTrace();
         }
     }
+
 
 
     // ===== УТИЛИТЫ =====
