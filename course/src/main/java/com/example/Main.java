@@ -3,7 +3,6 @@ package com.example;
 import java.io.*;
 import java.net.*;
 import java.nio.charset.StandardCharsets;
-import java.time.LocalTime;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -184,7 +183,7 @@ public class Main {
         String headers =
                 "HTTP/1.1 303 See Other\r\n" +
                         "Location: " + location + "\r\n" +
-                        "Content-Length: 0\r\n" +   // 🔥 КЛЮЧЕВО
+                        "Content-Length: 0\r\n" +
                         "Connection: close\r\n\r\n";
 
         out.write(headers.getBytes(StandardCharsets.UTF_8));
