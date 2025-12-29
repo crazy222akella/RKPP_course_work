@@ -50,8 +50,6 @@ public class PageEmployee {
             boolean atWork = today != null && today.isAtWork();
             boolean atLunch = today != null && today.isAtLunch() && atWork;
 
-
-
             String status;
             if (atLunch) {
                 status = "На обеде";
@@ -92,7 +90,7 @@ public class PageEmployee {
             String question = "";
             String questionBtn = "";
 
-            if (atWork && PresenceControl.shouldAsk(id)) {
+            if (atWork  && !atLunch && PresenceControl.shouldAsk(id)) {
                 question = "Подтвердите присутствие на рабочем месте";
                 questionBtn = """
                     <form action="/confirm" method="post">
@@ -124,7 +122,6 @@ public class PageEmployee {
                     </form>
                 """.formatted(id);
             }
-
 
             String html = Main.loadTemplate("employee.html");
 
